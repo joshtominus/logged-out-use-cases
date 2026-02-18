@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zapier Use Case Hierarchy — Org Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --surface: #18181c;
+      --border: #2a2a30;
+      --text: #e4e4e7;
+      --text-muted: #71717a;
+      --accent: #6366f1;
+      --sector: #8b5cf6;
+      --solution: #06b6d4;
+      --usecase: #22c55e;
+      --link: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(15, 15, 18, 0.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .header .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-left: 12px;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .controls label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+    button {
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover {
+      background: #222228;
+      border-color: #3f3f46;
+    }
+    button.primary {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+    }
+    button.primary:hover {
+      background: rgba(99, 102, 241, 0.25);
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .legend .dot.root { background: var(--accent); }
+    .legend .dot.sector { background: var(--sector); }
+    .legend .dot.solution { background: var(--solution); }
+    .legend .dot.useCase { background: var(--usecase); }
+    #chart {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+    #chart svg {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    #chart svg:active { cursor: grabbing; }
+    .node {
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .node:hover { opacity: 0.9; }
+    .node circle { stroke-width: 2; }
+    .node text {
+      font-size: 13px;
+      fill: var(--text);
+      pointer-events: none;
+      text-anchor: start;
+      font-weight: 500;
+    }
+    .node .node-count {
+      font-size: 11px;
+      fill: var(--text-muted);
+    }
+    .link {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 1.5;
+      stroke-opacity: 0.6;
+      transition: stroke-opacity 0.15s;
+    }
+    .link:hover { stroke-opacity: 1; }
+    .tooltip {
+      position: fixed;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 1000;
+      max-width: 280px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+    .tooltip .level { text-transform: capitalize; font-weight: 600; margin-bottom: 4px; }
+    .tooltip .automations { color: var(--text-muted); font-size: 0.75rem; }
+    .stats {
+      position: fixed;
+      bottom: 16px;
+      left: 20px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      z-index: 50;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Zapier Use Case Hierarchy</h1>
+      <span class="subtitle">Sector → Solution → Use Case → Automations</span>
+    </div>
+    <div class="controls">
+      <div class="legend">
+        <span><span class="dot root"></span> Root</span>
+        <span><span class="dot sector"></span> Sector</span>
+        <span><span class="dot solution"></span> Solution</span>
+        <span><span class="dot useCase"></span> Use Case</span>
+      </div>
+      <label>Expand to level:</label>
+      <button type="button" data-level="0">Sectors only</button>
+      <button type="button" data-level="1">+ Solutions</button>
+      <button type="button" data-level="2">+ Use cases</button>
+      <button type="button" class="primary" data-expand-all>Expand all</button>
+      <button type="button" data-collapse-all>Collapse all</button>
+    </div>
+  </div>
+  <div id="chart"></div>
+  <div class="stats" id="stats"></div>
+  <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+  <script src="data/hierarchy-seed.js"></script>
+  <script>
+    (function () {
+      function sectorToNode(sector) {
+        return {
+          name: sector.name,
+          level: "sector",
+          children: (sector.solutions || []).map((sol) => ({
+            name: sol.name,
+            level: "solution",
+            children: (sol.useCases || []).map((uc) => ({
+              name: uc,
+              level: "useCase",
+              automationCount: 5 + Math.floor(Math.random() * 25),
+              children: [],
+            })),
+          })),
+        };
+      }
+
+      function buildFullTree() {
+        const seed = window.hierarchySeed || { sectors: [] };
+        const sectorNodes = (seed.sectors || []).map(sectorToNode);
+        return {
+          name: "Zapier Use Cases",
+          level: "root",
+          children: sectorNodes,
+        };
+      }
+
+      let rootData = buildFullTree();
+      let root = null;
+      let tree = null;
+      let svg = null;
+      let g = null;
+      let zoom = null;
+      let treemap = null;
+      let nodeRadius = 4;
+      let duration = 300;
+
+      function countNodes(n) {
+        let c = 1;
+        if (n.children && n.children.length) c += n.children.reduce((s, ch) => s + countNodes(ch), 0);
+        return c;
+      }
+
+      function countVisible(d) {
+        if (!d.children || d.children.length === 0) return 1;
+        return 1 + d.children.reduce((s, c) => s + countVisible(c), 0);
+      }
+
+      function updateStats() {
+        const total = countNodes(rootData);
+        const visible = root ? countVisible(root) : 0;
+        document.getElementById("stats").textContent =
+          "Visible: " + visible + " of " + total + " nodes — Click a node to expand/collapse • Scroll to zoom • Drag to pan";
+      }
+
+      function collapse(d) {
+        if (d.children) {
+          d._children = d.children;
+          d._children.forEach(collapse);
+          d.children = null;
+        }
+      }
+
+      function expandToLevel(d, level) {
+        if (level < 0) return;
+        if (d.children) {
+          d.children.forEach((c) => expandToLevel(c, level - 1));
+          return;
+        }
+        if (d._children && (level > 0 || d.depth < level)) {
+          d.children = d._children;
+          d._children = null;
+          d.children.forEach((c) => expandToLevel(c, level - 1));
+        }
+      }
+
+      function expandAll(d) {
+        if (d._children) {
+          d.children = d._children;
+          d._children = null;
+          d.children.forEach(expandAll);
+        } else if (d.children) {
+          d.children.forEach(expandAll);
+        }
+      }
+
+      function collapseAll(d) {
+        if (d.children && d.depth > 0) {
+          d._children = d.children;
+          d.children = null;
+          d._children.forEach(collapseAll);
+        }
+      }
+
+      function levelColor(d) {
+        const L = d.data.level;
+        if (L === "root") return "#6366f1";
+        if (L === "sector") return "#8b5cf6";
+        if (L === "solution") return "#06b6d4";
+        return "#22c55e"; // useCase
+      }
+
+      function init() {
+        rootData = buildFullTree();
+        root = d3.hierarchy(rootData, (d) => d.children);
+        root.each((d) => {
+          d.data.depth = d.depth;
+          d.data.height = d.height;
+        });
+
+        // Start collapsed at sectors only (depth 0 = root, 1 = sectors)
+        root.children.forEach((sector) => {
+          sector.children && (sector._children = sector.children);
+          sector.children = null;
+        });
+
+        const container = document.getElementById("chart");
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        if (svg) svg.remove();
+        svg = d3.select("#chart").append("svg").attr("width", width).attr("height", height);
+
+        g = svg.append("g");
+
+        zoom = d3.zoom()
+          .scaleExtent([0.2, 4])
+          .on("zoom", (event) => g.attr("transform", event.transform));
+
+        svg.call(zoom);
+
+        // Left-to-right: layout y = depth, x = breadth; we swap to (d.y, d.x) when drawing
+        treemap = d3.tree().nodeSize([28, 180]).separation((a, b) => (a.parent === b.parent ? 1 : 1.2));
+
+        update(root);
+        updateStats();
+
+        // Center view
+        const bounds = g.node().getBBox();
+        const midX = bounds.x + bounds.width / 2;
+        const midY = bounds.y + bounds.height / 2;
+        const scale = Math.min(0.9, width / (bounds.width + 80), height / (bounds.height + 80));
+        svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2 - midX * scale, height / 2 - midY * scale).scale(scale));
+      }
+
+      function update(source) {
+        root = source;
+        const treeData = treemap(root);
+
+        const nodes = treeData.descendants();
+        const links = treeData.links();
+
+        const link = g.selectAll("path.link").data(links, (d) => d.target.data.name + (d.target.id || d.target.data.depth));
+
+        link.exit().remove();
+
+        const linkEnter = link.enter().append("path")
+          .attr("class", "link")
+          .attr("d", (d) => {
+            const o = { x: source.x0, y: source.y0 };
+            return diagonal(o, o);
+          });
+
+        link.merge(linkEnter).transition().duration(duration)
+          .attr("d", (d) => diagonal(d.source, d.target));
+
+        // Left-to-right: use y for horizontal (depth), x for vertical (breadth)
+        function diagonal(s, t) {
+          const mx = (s.y + t.y) / 2;
+          return "M" + s.y + "," + s.x + "C" + mx + "," + s.x + " " + mx + "," + t.x + " " + t.y + "," + t.x;
+        }
+
+        const node = g.selectAll("g.node").data(nodes, (d) => d.data.name + (d.id || d.data.depth));
+
+        const nodeExit = node.exit().transition().duration(duration)
+          .attr("transform", (d) => "translate(" + source.y + "," + source.x + ")");
+        nodeExit.select("circle").attr("r", 1e-6);
+        nodeExit.select("text").style("fill-opacity", 1e-6);
+        nodeExit.select(".node-count").style("fill-opacity", 1e-6);
+        nodeExit.remove();
+
+        const nodeEnter = node.enter().append("g")
+          .attr("class", "node")
+          .attr("transform", (d) => "translate(" + source.y0 + "," + source.x0 + ")")
+          .on("click", (event, d) => {
+            event.stopPropagation();
+            toggle(d);
+          });
+
+        nodeEnter.append("circle")
+          .attr("r", 0)
+          .attr("fill", (d) => levelColor(d))
+          .attr("stroke", (d) => d3.color(levelColor(d)).brighter(0.5))
+          .attr("stroke-width", 2);
+
+        nodeEnter.append("text")
+          .attr("dy", "0.32em")
+          .attr("x", (d) => (d.children || d._children ? -nodeRadius - 8 : nodeRadius + 8))
+          .attr("text-anchor", (d) => (d.children || d._children ? "end" : "start"))
+          .text((d) => d.data.name)
+          .style("fill-opacity", 1)
+          .clone(true).lower().attr("stroke", "var(--bg)").attr("stroke-width", 3);
+
+        nodeEnter.filter((d) => d.data.automationCount != null).append("text").attr("class", "node-count")
+          .attr("dy", "0.32em")
+          .attr("x", nodeRadius + 8)
+          .attr("text-anchor", "start")
+          .attr("dx", (d) => (d.data.name.length * 5.5 + 20))
+          .text((d) => "(" + d.data.automationCount + " automations)")
+          .style("fill-opacity", 0.85);
+
+        nodeEnter.on("mouseover", showTooltip);
+        nodeEnter.on("mousemove", showTooltip);
+        nodeEnter.on("mouseout", () => document.getElementById("tooltip").style.display = "none");
+
+        function showTooltip(event, d) {
+          const tip = document.getElementById("tooltip");
+          tip.style.display = "block";
+          tip.innerHTML =
+            "<div class='level'>" + d.data.level + "</div>" +
+            "<div>" + d.data.name + "</div>" +
+            (d.data.automationCount != null ? "<div class='automations'>~" + d.data.automationCount + " automations under this use case</div>" : "");
+          tip.style.left = (event.pageX + 12) + "px";
+          tip.style.top = (event.pageY + 12) + "px";
+        }
+
+        const nodeUpdate = node.merge(nodeEnter).transition().duration(duration)
+          .attr("transform", (d) => "translate(" + d.y + "," + d.x + ")");
+
+        nodeUpdate.select("circle").attr("r", nodeRadius);
+        nodeUpdate.select("text").style("fill-opacity", 1);
+        nodeUpdate.select(".node-count").style("fill-opacity", 0.7);
+
+        nodes.forEach((d) => {
+          d.x0 = d.x;
+          d.y0 = d.y;
+        });
+      }
+
+      function toggle(d) {
+        if (d.children) {
+          d._children = d.children;
+          d.children = null;
+        } else if (d._children) {
+          d.children = d._children;
+          d._children = null;
+        }
+        update(d);
+        updateStats();
+      }
+
+      function setExpandLevel(level) {
+        root = d3.hierarchy(rootData, (d) => d.children);
+        root.each((d) => {
+          if (d.depth <= level && d._children) {
+            d.children = d._children;
+            d._children = null;
+          }
+          if (d.depth > level && d.children) {
+            d._children = d.children;
+            d.children = null;
+          }
+        });
+        update(root);
+        updateStats();
+      }
+
+      document.querySelectorAll(".controls button[data-level]").forEach((btn) => {
+        btn.addEventListener("click", () => setExpandLevel(Number(btn.getAttribute("data-level"))));
+      });
+      document.querySelector("[data-expand-all]").addEventListener("click", () => {
+        root = d3.hierarchy(rootData, (d) => d.children);
+        root.each((d) => { expandAll(d); });
+        update(root);
+        updateStats();
+      });
+      document.querySelector("[data-collapse-all]").addEventListener("click", () => {
+        root = d3.hierarchy(rootData, (d) => d.children);
+        root.each((d) => collapseAll(d));
+        update(root);
+        updateStats();
+      });
+
+      window.addEventListener("resize", () => {
+        const container = document.getElementById("chart");
+        if (svg) {
+          svg.attr("width", container.clientWidth).attr("height", container.clientHeight);
+        }
+      });
+
+      init();
+    })();
+  </script>
+</body>
+</html>
