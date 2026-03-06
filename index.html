@@ -196,8 +196,8 @@
           children: (sector.solutions || []).map((sol) => ({
             name: sol.name,
             level: "solution",
-            children: (sol.useCases || []).map((uc) => ({
-              name: uc,
+            children: (Array.isArray(sol.useCases) ? sol.useCases : []).map((uc) => ({
+              name: typeof uc === "string" ? uc : String(uc),
               level: "useCase",
               automationCount: 5 + Math.floor(Math.random() * 25),
               children: [],
@@ -216,7 +216,7 @@
         };
       }
 
-      let rootData = buildFullTree();
+      let rootData = null;
       let root = null;
       let tree = null;
       let svg = null;
@@ -238,6 +238,7 @@
       }
 
       function updateStats() {
+        if (!rootData) return;
         const total = countNodes(rootData);
         const visible = root ? countVisible(root) : 0;
         document.getElementById("stats").textContent =
@@ -292,7 +293,10 @@
       }
 
       function init() {
-        rootData = buildFullTree();
+        if (!rootData || !rootData.children || rootData.children.length === 0) {
+          document.getElementById("stats").textContent = "No data loaded. Ensure data/solution-use-cases.js and data/hierarchy-seed.js load (e.g. run: npx serve) or use data/hierarchy.json.";
+          return;
+        }
         root = d3.hierarchy(rootData, (d) => d.children);
         root.each((d) => {
           d.data.depth = d.depth;
@@ -300,10 +304,12 @@
         });
 
         // Start collapsed at sectors only (depth 0 = root, 1 = sectors)
-        root.children.forEach((sector) => {
-          sector.children && (sector._children = sector.children);
-          sector.children = null;
-        });
+        if (root.children) {
+          root.children.forEach((sector) => {
+            sector.children && (sector._children = sector.children);
+            sector.children = null;
+          });
+        }
 
         const container = document.getElementById("chart");
         const width = container.clientWidth;
@@ -472,6 +478,25 @@
         updateStats();
       });
 
+      function start() {
+        document.getElementById("stats").textContent = "Loading…";
+        if (window.hierarchySeed && window.hierarchySeed.sectors && window.hierarchySeed.sectors.length > 0) {
+          rootData = buildFullTree();
+          init();
+          return;
+        }
+        fetch("data/hierarchy.json")
+          .then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+          .then((data) => {
+            rootData = data;
+            init();
+          })
+          .catch((err) => {
+            document.getElementById("stats").textContent =
+              "Could not load data. Run a local server from project root (e.g. npx serve or python -m http.server). " + (err && err.message ? err.message : "");
+          });
+      }
+
       window.addEventListener("resize", () => {
         const container = document.getElementById("chart");
         if (svg) {
@@ -479,7 +504,7 @@
         }
       });
 
-      init();
+      start();
     })();
   </script>
 </body>
