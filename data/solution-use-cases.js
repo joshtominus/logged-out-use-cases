@@ -269,12 +269,6 @@ const solutionUseCases = {
     "Mentorship and sponsorship matching", "Training and content suggestion", "Retention and advancement insight",
     "Stakeholder and leader brief", "Inclusion and belonging theme", "Goal and accountability narrative",
   ],
-  "AI Solutions - Sales Operations": [
-    "Territory and quota recommendation", "Forecast and pipeline narrative", "Comp and incentive calculation",
-    "CRM and data quality triage", "Report and dashboard insight", "Process and exception summary",
-    "Enablement and content suggestion", "Rep and performance trend", "Deal and approval triage",
-    "Coverage and capacity optimization", "SPIFF and contest recommendation", "Attribution and credit suggestion",
-  ],
   "AI Solutions - Contract Management": [
     "Contract and clause extraction", "Obligation and renewal summary", "Template and playbook suggestion",
     "Redline and change narrative", "Counterparty and risk summary", "Approval and exception triage",
