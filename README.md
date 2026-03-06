@@ -1,19 +1,21 @@
 # Zapier Use Case Hierarchy — Org Chart
 
-Hierarchical structure and interactive org chart for Zapier’s use case pages: **Sector → Solution → Use Case → Automations**.
+Hierarchical structure and interactive org chart for Zapier’s use case pages: **Role (sector) → Solution → Use Case → Automations**. Aligned to Zapier-relevant roles and solution categories only.
 
 ## Hierarchy
 
-- **Sector (top level)** — ~50 industries / business functions (e.g. Marketing, Sales, HR, RevOps, E‑commerce).
-- **Solution** — ~10+ solutions per sector (e.g. SEO, Lead Management, Employee Onboarding).
-- **Use case** — ~10+ use cases per solution (e.g. Keyword Research, Lead Capture).
-- **Automations** — Many concrete automations (Zaps, workflows) per use case; not drawn as nodes but shown as a count on use case nodes.
+- **Role (sector, top level)** — 45 roles (e.g. Marketing, Sales, RevOps, Customer Support, HR, IT, Finance, Operations, Legal, Product, Design, Executive Assistants, Executives, Customer Success, Recruiting / Talent Acquisition, Procurement, Security, Data & Analytics, Engineering, DevOps, PMO, Vendor Management, Contract Management, Personal Productivity, etc.).
+- **Solution** — From a set of 57 solution categories (e.g. CRM Management Automation, Email Marketing Automation, Lead Management Automation, Support Management Automation, Project Management Automation).
+- **Use case** — Multiple use cases per solution (e.g. Lead Capture, Drip Campaigns, Ticket Creation).
+- **Automations** — Concrete automations (Zaps, workflows) per use case; not drawn as nodes but shown as a count on use case nodes.
 
-Example: **Marketing** → **SEO** → **Keyword Research** (with many automations underneath).
+Example: **Marketing** → **Email Marketing Automation** → **Drip Campaigns** (with many automations underneath).
 
 ## What’s in this repo
 
-- **`data/hierarchy-seed.js`** — Single source of truth: all ~50 sectors with full solution and use case names (no generic templates). Same quality as Marketing across every sector.
+- **`data/hierarchy-seed.js`** — Single source of truth: all roles with solutions and use cases. Solutions are drawn from the 57 solution categories; use cases are Zapier-relevant.
+- **`data/solution-use-cases.js`** — Reusable use-case lists for each solution type (referenced by the seed).
+- **`data/keywords-zapier.js`** — Zapier-relevant automation keywords from keyword research (excludes non–workflow terms e.g. DIY home automation).
 - **`index.html`** — Single-page org chart: builds the full tree from the seed and renders an interactive D3 tree.
 - **`scripts/build-hierarchy.js`** — Optional Node script to export the full hierarchy to **`data/hierarchy.json`** (e.g. for other tools or static export).
 
@@ -41,7 +43,7 @@ Example: **Marketing** → **SEO** → **Keyword Research** (with many automatio
 
 ## Scaling
 
-- The page builds the full tree in the browser from the seed (~50 sectors, each with 10–12 solutions and 10–12 specific use cases → **thousands of nodes**). All names are hand-crafted; no generic “X Sync / X Tracking” templates.
+- The page builds the full tree in the browser from the seed (45 roles, each with several solutions from the 57 categories and multiple use cases → **thousands of nodes**). Solutions and use cases are aligned to Zapier workflow/app-integration use cases.
 - For very large “Expand all” views, layout and rendering may take a few seconds; use the level toggles to keep the visible set smaller when exploring.
 
 ## Optional: build `hierarchy.json`
