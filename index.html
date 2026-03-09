@@ -13,7 +13,7 @@
       --text: #e4e4e7;
       --text-muted: #71717a;
       --accent: #6366f1;
-      --sector: #8b5cf6;
+      --role: #8b5cf6;
       --solution: #06b6d4;
       --usecase: #22c55e;
       --link: #3b82f6;
@@ -94,7 +94,7 @@
     .legend span { display: inline-flex; align-items: center; gap: 6px; }
     .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
     .legend .dot.root { background: var(--accent); }
-    .legend .dot.sector { background: var(--sector); }
+    .legend .dot.role { background: var(--role); }
     .legend .dot.solution { background: var(--solution); }
     .legend .dot.useCase { background: var(--usecase); }
     #chart {
@@ -164,17 +164,17 @@
   <div class="header">
     <div>
       <h1>Zapier Use Case Hierarchy</h1>
-      <span class="subtitle">Sector → Solution → Use Case → Automations</span>
+      <span class="subtitle">Role → Solution → Use Case → Automations</span>
     </div>
     <div class="controls">
       <div class="legend">
         <span><span class="dot root"></span> Root</span>
-        <span><span class="dot sector"></span> Sector</span>
+        <span><span class="dot role"></span> Role</span>
         <span><span class="dot solution"></span> Solution</span>
         <span><span class="dot useCase"></span> Use Case</span>
       </div>
       <label>Expand to level:</label>
-      <button type="button" data-level="0">Sectors only</button>
+      <button type="button" data-level="0">Roles only</button>
       <button type="button" data-level="1">+ Solutions</button>
       <button type="button" data-level="2">+ Use cases</button>
       <button type="button" class="primary" data-expand-all>Expand all</button>
@@ -189,11 +189,11 @@
   <script src="data/hierarchy-seed.js"></script>
   <script>
     (function () {
-      function sectorToNode(sector) {
+      function roleToNode(role) {
         return {
-          name: sector.name,
-          level: "sector",
-          children: (sector.solutions || []).map((sol) => ({
+          name: role.name,
+          level: "role",
+          children: (role.solutions || []).map((sol) => ({
             name: sol.name,
             level: "solution",
             children: (Array.isArray(sol.useCases) ? sol.useCases : []).map((uc) => ({
@@ -207,12 +207,12 @@
       }
 
       function buildFullTree() {
-        const seed = window.hierarchySeed || { sectors: [] };
-        const sectorNodes = (seed.sectors || []).map(sectorToNode);
+        const seed = window.hierarchySeed || { roles: [] };
+        const roleNodes = (seed.roles || []).map(roleToNode);
         return {
           name: "Zapier Use Cases",
           level: "root",
-          children: sectorNodes,
+          children: roleNodes,
         };
       }
 
@@ -287,7 +287,7 @@
       function levelColor(d) {
         const L = d.data.level;
         if (L === "root") return "#6366f1";
-        if (L === "sector") return "#8b5cf6";
+        if (L === "role") return "#8b5cf6";
         if (L === "solution") return "#06b6d4";
         return "#22c55e"; // useCase
       }
@@ -303,11 +303,11 @@
           d.data.height = d.height;
         });
 
-        // Start collapsed at sectors only (depth 0 = root, 1 = sectors)
+        // Start collapsed at roles only (depth 0 = root, 1 = roles)
         if (root.children) {
-          root.children.forEach((sector) => {
-            sector.children && (sector._children = sector.children);
-            sector.children = null;
+          root.children.forEach((role) => {
+            role.children && (role._children = role.children);
+            role.children = null;
           });
         }
 
@@ -441,6 +441,15 @@
         } else if (d._children) {
           d.children = d._children;
           d._children = null;
+          // When expanding a role, keep all solutions collapsed so use cases are hidden
+          if (d.data.level === "role" && d.children) {
+            d.children.forEach((child) => {
+              if (child.children) {
+                child._children = child.children;
+                child.children = null;
+              }
+            });
+          }
         }
         update(d);
         updateStats();
@@ -480,7 +489,7 @@
 
       function start() {
         document.getElementById("stats").textContent = "Loading…";
-        if (window.hierarchySeed && window.hierarchySeed.sectors && window.hierarchySeed.sectors.length > 0) {
+        if (window.hierarchySeed && window.hierarchySeed.roles && window.hierarchySeed.roles.length > 0) {
           rootData = buildFullTree();
           init();
           return;
